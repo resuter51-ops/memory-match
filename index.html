@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEMORY ARCADE</title>
+    <style>
+        /* CSS resets and variables */
+        :root {
+            --bg-color: #05050a;
+            --card-back-bg: #12121e;
+            --card-front-bg: #1a1a2e;
+            --gold: #ffaa00;
+            --blue: #00aaff;
+            --text-color: #e2e2e9;
+            --border-color: #2a2a3e;
+            --shadow-color: rgba(0, 0, 0, 0.7);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Georgia', 'Times New Roman', Times, serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 440px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.3), 0 0 20px rgba(255, 170, 0, 0.2);
+            margin-bottom: 15px;
+            font-weight: normal;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            font-size: 1rem;
+            justify-content: space-between;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            background: rgba(18, 18, 30, 0.6);
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0, 170, 255, 0.05);
+            color: var(--blue);
+        }
+
+        .stat-val {
+            color: var(--text-color);
+            font-weight: bold;
+            display: block;
+            font-size: 1.4rem;
+            margin-top: 5px;
+        }
+
+        /* The Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            max-width: 440px;
+            width: 100%;
+            perspective: 1000px; /* Crucial for 3D flip */
+            margin-bottom: 25px;
+        }
+
+        /* Card Container */
+        .card {
+            aspect-ratio: 1 / 1;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            border-radius: 8px;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .card:active {
+            transform: scale(0.95);
+            transition: transform 0.1s;
+        }
+
+        /* Flip states */
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            transform: rotateY(180deg);
+            pointer-events: none;
+        }
+
+        /* Card Faces */
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px var(--shadow-color);
+            border: 2px solid var(--border-color);
+        }
+
+        /* Card Back (Face Down) */
+        .card-back {
+            background-color: var(--card-back-bg);
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255, 170, 0, 0.1) 1.5px, transparent 1.5px),
+                radial-gradient(circle at 0 0, rgba(0, 170, 255, 0.05) 1.5px, transparent 1.5px);
+            background-size: 16px 16px;
+            border-color: var(--gold);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-back::after {
+            content: "✦";
+            color: var(--gold);
+            font-size: 2rem;
+            opacity: 0.8;
+            text-shadow: 0 0 8px rgba(255, 170, 0, 0.6);
+        }
+
+        /* Card Front (Face Up) */
+        .card-front {
+            background-color: var(--card-front-bg);
+            transform: rotateY(180deg);
+            font-size: 2.5rem;
+            border-color: var(--blue);
+            box-shadow: inset 0 0 15px rgba(0, 170, 255, 0.15);
+        }
+
+        /* Matched styling glow effect */
+        .card.matched .card-front {
+            border-color: var(--gold);
+            box-shadow: inset 0 0 20px rgba(255, 170, 0, 0.25);
+            animation: matchPulse 0.5s ease-out;
+        }
+
+        @keyframes matchPulse {
+            0% { transform: rotateY(180deg) scale(1); }
+            50% { transform: rotateY(180deg) scale(1.08); border-color: var(--gold); }
+            100% { transform: rotateY(180deg) scale(1); }
+        }
+
+        /* Buttons & Controls */
+        .controls {
+            width: 100%;
+            max-width: 440px;
+            display: flex;
+            justify-content: center;
+        }
+
+        button {
+            background-color: transparent;
+            color: var(--gold);
+            border: 1.5px solid var(--gold);
+            padding: 12px 32px;
+            font-family: inherit;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: var(--gold);
+            color: var(--bg-color);
+            box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
+            font-weight: bold;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* Win Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(5, 5, 10, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--card-back-bg);
+            border: 2px solid var(--gold);
+            padding: 40px 30px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 170, 0, 0.1);
+            transform: scale(0.8);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        .modal h2 {
+            color: var(--gold);
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            font-weight: normal;
+        }
+
+        .modal p {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            color: var(--text-color);
+            opacity: 0.9;
+        }
+
+        .modal-stats {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(5, 5, 10, 0.5);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-stat-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            color: var(--blue);
+        }
+
+        .modal-stat-line:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Responsive styling */
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 2rem;
+                letter-spacing: 2px;
+                margin-bottom: 10px;
+            }
+            .grid {
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+            .card-front {
+                font-size: 2rem;
+            }
+            .card-back::after {
+                font-size: 1.5rem;
+            }
+            .stats {
+                gap: 10px;
+            }
+            .stat-val {
+                font-size: 1.2rem;
+            }
+            .modal {
+                padding: 30px 20px;
+            }
+            .modal h2 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Memory Arcade</h1>
+        <div class="stats">
+            <div class="stat-item">Moves <span id="moves" class="stat-val">0</span></div>
+            <div class="stat-item">Time <span id="timer" class="stat-val">00:00</span></div>
+        </div>
+    </header>
+
+    <main class="grid" id="grid"></main>
+
+    <div class="controls">
+        <button id="reset-btn">Restart</button>
+    </div>
+
+    <!-- Win Modal -->
+    <div class="modal-overlay" id="win-modal">
+        <div class="modal">
+            <h2>Chronicle Complete</h2>
+            <p>You have unravelled all the matching secrets hidden in the library archives.</p>
+            <div class="modal-stats">
+                <div class="modal-stat-line">
+                    <span>Moves Made:</span>
+                    <span id="final-moves" class="stat-val" style="color: var(--text-color); font-size: 1.2rem; margin-top: 0;">0</span>
+                </div>
+                <div class="modal-stat-line">
+                    <span>Time Elapsed:</span>
+                    <span id="final-time" class="stat-val" style="color: var(--text-color); font-size: 1.2rem; margin-top: 0;">00:00</span>
+                </div>
+            </div>
+            <button id="play-again-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const emojis = ['🗡️', '📜', '🏰', '⚡', '🔑', '📖', '🔬', '💀'];
+        // Double the array to make 8 pairs
+        let cardSymbols = [...emojis, ...emojis];
+        
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let timerInterval = null;
+        let seconds = 0;
+        let isLockBoard = false;
+        let isGameStarted = false;
+
+        const gridElement = document.getElementById('grid');
+        const movesElement = document.getElementById('moves');
+        const timerElement = document.getElementById('timer');
+        const resetButton = document.getElementById('reset-btn');
+        const winModal = document.getElementById('win-modal');
+        const finalMovesElement = document.getElementById('final-moves');
+        const finalTimeElement = document.getElementById('final-time');
+        const playAgainButton = document.getElementById('play-again-btn');
+
+        // Shuffle function (Fisher-Yates)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Start Timer
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            seconds = 0;
+            timerElement.textContent = "00:00";
+            timerInterval = setInterval(() => {
+                seconds++;
+                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const secs = (seconds % 60).toString().padStart(2, '0');
+                timerElement.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        // Stop Timer
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        // Initialize Game
+        function initGame() {
+            // Reset statistics
+            moves = 0;
+            matchedPairs = 0;
+            flippedCards = [];
+            isLockBoard = false;
+            isGameStarted = false;
+            movesElement.textContent = '0';
+            timerElement.textContent = '00:00';
+            if (timerInterval) clearInterval(timerInterval);
+
+            // Hide modal
+            winModal.classList.remove('show');
+
+            // Clear Grid
+            gridElement.innerHTML = '';
+
+            // Shuffle cards
+            const shuffledSymbols = shuffle([...cardSymbols]);
+
+            // Create Card elements
+            shuffledSymbols.forEach((symbol, index) => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.symbol = symbol;
+                card.dataset.index = index;
+
+                const cardBack = document.createElement('div');
+                cardBack.classList.add('card-face', 'card-back');
+
+                const cardFront = document.createElement('div');
+                cardFront.classList.add('card-face', 'card-front');
+                cardFront.textContent = symbol;
+
+                card.appendChild(cardBack);
+                card.appendChild(cardFront);
+
+                card.addEventListener('click', () => handleCardClick(card));
+                gridElement.appendChild(card);
+            });
+        }
+
+        // Card Click Handler
+        function handleCardClick(card) {
+            // Prevent clicking if board is locked, or if card is already flipped/matched
+            if (isLockBoard) return;
+            if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+            // Start timer on first card click
+            if (!isGameStarted) {
+                isGameStarted = true;
+                startTimer();
+            }
+
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                movesElement.textContent = moves;
+                checkForMatch();
+            }
+        }
+
+        // Check for Match
+        function checkForMatch() {
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.dataset.symbol === card2.dataset.symbol;
+
+            if (isMatch) {
+                disableCards();
+            } else {
+                unflipCards();
+            }
+        }
+
+        // Disable Cards (Match found)
+        function disableCards() {
+            flippedCards[0].classList.add('matched');
+            flippedCards[1].classList.add('matched');
+            
+            // Clean up flipped cards array
+            flippedCards = [];
+            matchedPairs++;
+
+            if (matchedPairs === emojis.length) {
+                setTimeout(showWinScreen, 500);
+            }
+        }
+
+        // Unflip Cards (Mismatch found)
+        function unflipCards() {
+            isLockBoard = true;
+            setTimeout(() => {
+                flippedCards[0].classList.remove('flipped');
+                flippedCards[1].classList.remove('flipped');
+                flippedCards = [];
+                isLockBoard = false;
+            }, 1000);
+        }
+
+        // Show Win Screen
+        function showWinScreen() {
+            stopTimer();
+            finalMovesElement.textContent = moves;
+            finalTimeElement.textContent = timerElement.textContent;
+            winModal.classList.add('show');
+        }
+
+        // Event Listeners
+        resetButton.addEventListener('click', initGame);
+        playAgainButton.addEventListener('click', initGame);
+
+        // Start game on load
+        window.onload = initGame;
+    </script>
+</body>
+</html>
